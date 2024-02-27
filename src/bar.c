@@ -1,4 +1,5 @@
 #include "bar.h"
+#include "animation.h"
 #include "background.h"
 #include "bar_manager.h"
 #include "display.h"
@@ -162,9 +163,6 @@ void bar_draw(struct bar *bar, bool forced) {
     background.enabled = true;
     CGContextClearRect(bar->window.context, bar->window.frame);
     background_draw(&background, bar->window.context);
-
-    // draw_inverted_rounded_rect_top(bar->window.context, background.bounds,
-    //                                &background.color, 16);
   }
 
   for (int i = 0; i < g_bar_manager.bar_item_count; i++) {
@@ -210,6 +208,8 @@ void bar_draw(struct bar *bar, bool forced) {
 static void bar_calculate_bounds_top_bottom(struct bar *bar) {
   bool is_builtin = CGDisplayIsBuiltin(bar->did);
   uint32_t notch_width = is_builtin ? g_bar_manager.notch_width : 0;
+  uint32_t bar_height = bar->window.frame.size.height -
+                        g_bar_manager.background.inverted_corner_radius;
 
   uint32_t center_length =
       bar_manager_length_for_bar_side(&g_bar_manager, bar, POSITION_CENTER);
@@ -231,7 +231,7 @@ static void bar_calculate_bounds_top_bottom(struct bar *bar) {
       (bar->window.frame.size.width - notch_width) / 2 - 1;
 
   uint32_t *next_position = NULL;
-  uint32_t y = bar->window.frame.size.height / 2;
+  uint32_t y = bar_height / 2;
 
   for (int i = 0; i < g_bar_manager.bar_item_count; i++) {
     struct bar_item *bar_item = g_bar_manager.bar_items[i];
@@ -273,16 +273,14 @@ static void bar_calculate_bounds_top_bottom(struct bar *bar) {
 
     CGPoint shadow_offsets = bar_item_calculate_shadow_offsets(bar_item);
     uint32_t bar_item_length = bar_item_calculate_bounds(
-        bar_item,
-        bar->window.frame.size.height -
-            (g_bar_manager.background.border_width + 1),
+        bar_item, bar_height - (g_bar_manager.background.border_width + 1),
         max(shadow_offsets.x, 0), y);
 
     CGRect frame = {
         {bar->window.origin.x + *next_position - max(shadow_offsets.x, 0),
          bar->window.origin.y},
         {bar_item_display_length + shadow_offsets.x + shadow_offsets.y,
-         bar->window.frame.size.height}};
+         bar_height}};
 
     window_set_frame(bar_item_get_window(bar_item, bar->adid), frame);
 
